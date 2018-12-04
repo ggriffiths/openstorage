@@ -309,7 +309,6 @@ func start(c *cli.Context) error {
 			pluginPort = 0
 		}
 
-		fmt.Println("SDK ENDP", c.String("sdkendpoint"))
 		sdksocket := fmt.Sprintf("/var/lib/osd/driver/%s-sdk.sock", d)
 		if err := server.StartPluginAPI(
 			d, sdksocket, c.String("sdkendpoint"),
@@ -346,7 +345,6 @@ func start(c *cli.Context) error {
 		csiServer.Start()
 
 		// Start SDK Server for this driver
-		sdksocket := fmt.Sprintf("/var/lib/osd/driver/%s-sdk.sock", d)
 		os.Remove(sdksocket)
 
 		sdkServer, err := sdk.New(&sdk.ServerConfig{

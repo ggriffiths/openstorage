@@ -297,6 +297,7 @@ func (d *driver) remove(w http.ResponseWriter, r *http.Request) {
 
 	// get spec for deletion
 	specParsed, _, _, _, name := d.SpecFromString(request.Name)
+	d.logRequest(method, name).Infoln("")
 	if !specParsed {
 		_, _, _, err = d.SpecFromOpts(request.Opts)
 		if err != nil {
