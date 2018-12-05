@@ -332,15 +332,13 @@ func (d *driver) remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// delete volumes
-	for _, volId := range enumerateResp.VolumeIds {
-		_, err := volumes.Delete(ctx, &api.SdkVolumeDeleteRequest{
-			VolumeId: volId,
-		})
-		if err != nil {
-			d.errorResponse(method, w, err)
-			return
-		}
+	// delete volume
+	_, err = volumes.Delete(ctx, &api.SdkVolumeDeleteRequest{
+		VolumeId: enumerateResp.VolumeIds[0],
+	})
+	if err != nil {
+		d.errorResponse(method, w, err)
+		return
 	}
 
 	json.NewEncoder(w).Encode(&volumeResponse{})

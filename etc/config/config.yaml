@@ -5,12 +5,12 @@ osd:
     clusterid: "deadbeeef"
   drivers:
 #   vfs:
-#   pwx:
-#     mgmtPort: "2376"
-#     pluginPort: "2377"
-    nfs:
-      server: "127.0.0.1"
-      path: "/nfs"
+   pwx:
+     mgmtPort: "2376"
+     pluginPort: "2377"
+#    nfs:
+#      server: "127.0.0.1"
+#      path: "/nfs"
 #    btrfs:
 #      home: "/var/lib/openstorage/btrfs"
 #    aws:

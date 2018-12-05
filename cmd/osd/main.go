@@ -104,6 +104,11 @@ func main() {
 			Value: "9110",
 		},
 		cli.StringFlag{
+			Name:  "sdkendpoint",
+			Usage: "Endpoint for connecting to the OSD SDK server. Example: localhost:9100",
+			Value: "localhost:9100",
+		},
+		cli.StringFlag{
 			Name:  "nodeid",
 			Usage: "Name of this node",
 			Value: "1",
@@ -304,9 +309,10 @@ func start(c *cli.Context) error {
 			pluginPort = 0
 		}
 
+		fmt.Println("SDK ENDP", c.String("sdkendpoint"))
 		sdksocket := fmt.Sprintf("/var/lib/osd/driver/%s-sdk.sock", d)
 		if err := server.StartPluginAPI(
-			d, sdksocket,
+			d, sdksocket, c.String("sdkendpoint"),
 			volume.DriverAPIBase,
 			volume.PluginAPIBase,
 			uint16(mgmtPort),
