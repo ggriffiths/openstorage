@@ -100,7 +100,6 @@ func StartVolumePluginAPI(
 	pluginBase string,
 	pluginPort uint16,
 ) error {
-
 	volPluginApi := newVolumePlugin(name, sdkEndpoint)
 	if err := startServer(
 		name,
