@@ -305,7 +305,6 @@ func (d *driver) remove(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	d.logRequest(method, name).Infoln("")
 
 	// get grpc connection
 	conn, err := d.getConn()
