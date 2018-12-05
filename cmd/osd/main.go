@@ -304,8 +304,9 @@ func start(c *cli.Context) error {
 			pluginPort = 0
 		}
 
+		sdksocket := fmt.Sprintf("/var/lib/osd/driver/%s-sdk.sock", d)
 		if err := server.StartPluginAPI(
-			d,
+			d, sdksocket,
 			volume.DriverAPIBase,
 			volume.PluginAPIBase,
 			uint16(mgmtPort),

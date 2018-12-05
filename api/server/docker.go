@@ -148,6 +148,8 @@ func (d *driver) volFromNameSdk(ctx context.Context, volumes api.OpenStorageVolu
 	})
 	if err != nil {
 		return nil, err
+	} else if len(enumerateResp.VolumeIds) < 1 {
+		return nil, fmt.Errorf("Cannot locate volume with name %s", name)
 	}
 
 	// inspect for actual volume
@@ -214,7 +216,6 @@ func (d *driver) mountpath(name string) string {
 }
 
 func (d *driver) getConn() (*grpc.ClientConn, error) {
-
 	if d.conn == nil {
 		var err error
 		d.conn, err = grpcserver.Connect(

@@ -99,7 +99,7 @@ func StartVolumePluginAPI(
 	pluginPort uint16,
 ) error {
 
-	volPluginApi := newVolumePlugin(name, sdkUds)
+	volPluginApi := newVolumePlugin(name, "localhost:9100")
 	if err := startServer(
 		name,
 		pluginBase,
