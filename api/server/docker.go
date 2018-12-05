@@ -12,10 +12,12 @@ import (
 	"github.com/libopenstorage/openstorage/api"
 	"github.com/libopenstorage/openstorage/api/spec"
 	"github.com/libopenstorage/openstorage/config"
+	"github.com/libopenstorage/openstorage/pkg/grpcserver"
 	"github.com/libopenstorage/openstorage/pkg/options"
 	"github.com/libopenstorage/openstorage/pkg/util"
 	"github.com/libopenstorage/openstorage/volume"
 	"github.com/libopenstorage/openstorage/volume/drivers"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -28,6 +30,9 @@ const (
 type driver struct {
 	restBase
 	spec.SpecHandler
+
+	sdkUds string
+	conn   *grpc.ClientConn
 }
 
 type handshakeResp struct {
@@ -66,8 +71,13 @@ type capabilitiesResponse struct {
 	Capabilities capabilities
 }
 
-func newVolumePlugin(name string) restServer {
-	return &driver{restBase{name: name, version: "0.3"}, spec.NewSpecHandler()}
+func newVolumePlugin(name, sdkUds string) restServer {
+	d := &driver{
+		restBase:    restBase{name: name, version: "0.3"},
+		SpecHandler: spec.NewSpecHandler(),
+		sdkUds:      sdkUds,
+	}
+	return d
 }
 
 func (d *driver) String() string {
@@ -203,6 +213,20 @@ func (d *driver) mountpath(name string) string {
 	return path.Join(volume.MountBase, name)
 }
 
+func (d *driver) getConn() (*grpc.ClientConn, error) {
+
+	if d.conn == nil {
+		var err error
+		d.conn, err = grpcserver.Connect(
+			d.sdkUds,
+			[]grpc.DialOption{grpc.WithInsecure()})
+		if err != nil {
+			return nil, fmt.Errorf("Failed to connect to gRPC handler: %v", err)
+		}
+	}
+	return d.conn, nil
+}
+
 func (d *driver) create(w http.ResponseWriter, r *http.Request) {
 	method := "create"
 	ctx := r.Context()
@@ -271,7 +295,7 @@ func (d *driver) remove(w http.ResponseWriter, r *http.Request) {
 	d.attachToken(ctx, request)
 
 	// get spec for deletion
-	specParsed, _, locator, _, name := d.SpecFromString(request.Name)
+	specParsed, _, _, _, name := d.SpecFromString(request.Name)
 	if !specParsed {
 		_, _, _, err = d.SpecFromOpts(request.Opts)
 		if err != nil {

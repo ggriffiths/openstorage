@@ -45,7 +45,7 @@ func StartGraphAPI(name string, restBase string) error {
 // StartPluginAPI starts a REST server to receive volume API commands from the
 // Linux container engine and volume management commands from the CLI/UX.
 func StartPluginAPI(
-	name string,
+	name, sdkUds string,
 	mgmtBase string,
 	pluginBase string,
 	mgmtPort uint16,
@@ -59,7 +59,7 @@ func StartPluginAPI(
 		return err
 	}
 	if err := StartVolumePluginAPI(
-		name,
+		name, sdkUds,
 		pluginBase,
 		pluginPort,
 	); err != nil {
@@ -94,12 +94,12 @@ func GetVolumeAPIRoutes(name string) []*Route {
 // StartVolumePluginAPI starts a REST server to receive volume API commands
 // from the linux container  engine
 func StartVolumePluginAPI(
-	name string,
+	name, sdkUds string,
 	pluginBase string,
 	pluginPort uint16,
 ) error {
 
-	volPluginApi := newVolumePlugin(name)
+	volPluginApi := newVolumePlugin(name, sdkUds)
 	if err := startServer(
 		name,
 		pluginBase,

@@ -44,6 +44,8 @@ type SpecHandler interface {
 		string,
 	)
 
+	GetTokenFromString(str string) (string, bool)
+
 	// SpecFromOpts parses in docker options passed in the the docker run
 	// command of the form --opt name=value
 	// source is populated if --opt parent=<volume_id> is specified.
@@ -77,6 +79,7 @@ type SpecHandler interface {
 
 var (
 	nameRegex                   = regexp.MustCompile(api.Name + "=([0-9A-Za-z_-]+),?")
+	tokenRegex                  = regexp.MustCompile(api.Token + "=([A-Za-z0-9-_=]+\\.[A-Za-z0-9-_=]+\\.?[A-Za-z0-9-_.+/=]+),?")
 	nodesRegex                  = regexp.MustCompile(api.SpecNodes + "=([A-Za-z0-9-_;]+),?")
 	parentRegex                 = regexp.MustCompile(api.SpecParent + "=([A-Za-z]+),?")
 	sizeRegex                   = regexp.MustCompile(api.SpecSize + "=([0-9A-Za-z]+),?")
@@ -353,6 +356,11 @@ func (d *specHandler) SpecFromOpts(
 
 	spec := d.DefaultSpec()
 	return d.UpdateSpecFromOpts(opts, spec, locator, source)
+}
+
+func (d *specHandler) GetTokenFromString(str string) (string, bool) {
+	ok, token := d.getVal(tokenRegex, str)
+	return token, ok
 }
 
 func (d *specHandler) SpecOptsFromString(
