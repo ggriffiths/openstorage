@@ -628,18 +628,18 @@ func (d *driver) list(w http.ResponseWriter, r *http.Request) {
 	}
 
 	volInfo := make([]volumeInfo, len(enumerateResp.VolumeIds))
-	for i, v := range enumerateResp.VolumeIds {
+	for i, id := range enumerateResp.VolumeIds {
 		inspectResp, err := sdkClient.Inspect(ctx, &api.SdkVolumeInspectRequest{
-			VolumeId: v,
+			VolumeId: id,
 		})
 		if err != nil {
 			continue
 		}
 		volInfo[i].Name = inspectResp.Volume.Locator.Name
 
-		//if len(v.AttachPath) > 0 || len(v.AttachPath) > 0 {
-		//	volInfo[i].Mountpoint = path.Join(v.AttachPath[0], config.DataDir)
-		//}
+		if len(inspectResp.Volume.AttachPath) > 0 || len(inspectResp.Volume.AttachPath) > 0 {
+			volInfo[i].Mountpoint = path.Join(inspectResp.Volume.AttachPath[0], config.DataDir)
+		}
 	}
 	json.NewEncoder(w).Encode(map[string][]volumeInfo{"Volumes": volInfo})
 }
