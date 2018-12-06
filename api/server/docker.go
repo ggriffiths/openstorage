@@ -636,7 +636,6 @@ func (d *driver) list(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		volInfo[i].Name = inspectResp.Volume.Locator.Name
-
 		if len(inspectResp.Volume.AttachPath) > 0 || len(inspectResp.Volume.AttachPath) > 0 {
 			volInfo[i].Mountpoint = path.Join(inspectResp.Volume.AttachPath[0], config.DataDir)
 		}
