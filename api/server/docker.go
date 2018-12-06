@@ -610,26 +610,29 @@ func (d *driver) path(w http.ResponseWriter, r *http.Request) {
 
 func (d *driver) list(w http.ResponseWriter, r *http.Request) {
 	method := "list"
+	ctx := r.Context()
 
-	v, err := volumedrivers.Get(d.name)
-	if err != nil {
-		d.logRequest(method, "").Warnf("Cannot locate volume driver: %v", err.Error())
-		d.errorResponse(method, w, err)
-		return
-	}
-
-	vols, err := v.Enumerate(nil, nil)
+	// get grpc connection
+	conn, err := d.getConn()
 	if err != nil {
 		d.errorResponse(method, w, err)
 		return
 	}
 
-	volInfo := make([]volumeInfo, len(vols))
-	for i, v := range vols {
-		volInfo[i].Name = v.Locator.Name
-		if len(v.AttachPath) > 0 || len(v.AttachPath) > 0 {
-			volInfo[i].Mountpoint = path.Join(v.AttachPath[0], config.DataDir)
-		}
+	// get all volumes
+	sdkClient := api.NewOpenStorageVolumeClient(conn)
+	enumerateResp, err := sdkClient.Enumerate(ctx, &api.SdkVolumeEnumerateRequest{})
+	if err != nil {
+		d.errorResponse(method, w, err)
+		return
+	}
+
+	volInfo := make([]volumeInfo, len(enumerateResp.VolumeIds))
+	for i, v := range enumerateResp.VolumeIds {
+		volInfo[i].Name = vol.Locator.Name
+		//if len(v.AttachPath) > 0 || len(v.AttachPath) > 0 {
+		//	volInfo[i].Mountpoint = path.Join(v.AttachPath[0], config.DataDir)
+		//}
 	}
 	json.NewEncoder(w).Encode(map[string][]volumeInfo{"Volumes": volInfo})
 }
