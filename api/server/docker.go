@@ -629,7 +629,14 @@ func (d *driver) list(w http.ResponseWriter, r *http.Request) {
 
 	volInfo := make([]volumeInfo, len(enumerateResp.VolumeIds))
 	for i, v := range enumerateResp.VolumeIds {
-		volInfo[i].Name = vol.Locator.Name
+		inspectResp, err := sdkClient.Inspect(ctx, &api.SdkVolumeInspectRequest{
+			VolumeId: v,
+		})
+		if err != nil {
+			continue
+		}
+		volInfo[i].Name = inspectResp.Volume.Locator.Name
+
 		//if len(v.AttachPath) > 0 || len(v.AttachPath) > 0 {
 		//	volInfo[i].Mountpoint = path.Join(v.AttachPath[0], config.DataDir)
 		//}
