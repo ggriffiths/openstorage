@@ -185,17 +185,6 @@ func (d *driver) decodeMount(method string, w http.ResponseWriter, r *http.Reque
 	return &request, nil
 }
 
-func (d *driver) handshake(w http.ResponseWriter, r *http.Request) {
-	err := json.NewEncoder(w).Encode(&handshakeResp{
-		[]string{VolumeDriver},
-	})
-	if err != nil {
-		d.sendError("handshake", "", w, "encode error", http.StatusInternalServerError)
-		return
-	}
-	d.logRequest("handshake", "").Debugln("Handshake completed")
-}
-
 func (d *driver) attachToken(ctx context.Context, request *volumeRequest) {
 	token, tokenInName := d.GetTokenFromString(request.Name)
 	if !tokenInName {
@@ -205,6 +194,17 @@ func (d *driver) attachToken(ctx context.Context, request *volumeRequest) {
 		"authorization": "bearer " + token,
 	})
 	ctx = metadata.NewOutgoingContext(ctx, md)
+}
+
+func (d *driver) handshake(w http.ResponseWriter, r *http.Request) {
+	err := json.NewEncoder(w).Encode(&handshakeResp{
+		[]string{VolumeDriver},
+	})
+	if err != nil {
+		d.sendError("handshake", "", w, "encode error", http.StatusInternalServerError)
+		return
+	}
+	d.logRequest("handshake", "").Debugln("Handshake completed")
 }
 
 func (d *driver) status(w http.ResponseWriter, r *http.Request) {
@@ -494,7 +494,9 @@ func (d *driver) attachOptionsFromSpec(
 func (d *driver) mount(w http.ResponseWriter, r *http.Request) {
 	var response volumePathResponse
 	method := "mount"
+	ctx := r.Context()
 
+	// get driver and decode request
 	v, err := volumedrivers.Get(d.name)
 	if err != nil {
 		d.logRequest(method, "").Warnf("Cannot locate volume driver")
@@ -509,7 +511,18 @@ func (d *driver) mount(w http.ResponseWriter, r *http.Request) {
 	}
 	_, spec, _, _, name := d.SpecFromString(request.Name)
 	attachOptions := d.attachOptionsFromSpec(spec)
-	vol, err := d.volFromName(name)
+
+	// attach token in context metadata
+	//d.attachToken(ctx, request)
+
+	// get grpc connection and connect to sdk
+	conn, err := d.getConn()
+	if err != nil {
+		d.errorResponse(method, w, err)
+		return
+	}
+	sdkClient := api.NewOpenStorageVolumeClient(conn)
+	vol, err := d.volFromNameSdk(ctx, sdkClient, name)
 	if err != nil {
 		d.sendError(method, "", w, err.Error(), http.StatusBadRequest)
 		return
@@ -567,7 +580,24 @@ func (d *driver) mount(w http.ResponseWriter, r *http.Request) {
 	// result of scale up.
 	response.Mountpoint = mountpoint
 	os.MkdirAll(mountpoint, 0755)
-	err = v.Mount(vol.Id, response.Mountpoint, nil)
+	mountClient := api.NewOpenStorageMountAttachClient(conn)
+
+	// attach and mount
+	_, err = mountClient.Attach(ctx, &api.SdkVolumeAttachRequest{
+		VolumeId: vol.Id,
+	})
+	if err != nil {
+		d.logRequest(method, request.Name).Warnf(
+			"Cannot attach volume %v, %v",
+			response.Mountpoint, err)
+		d.errorResponse(method, w, err)
+		return
+	}
+
+	_, err = mountClient.Mount(ctx, &api.SdkVolumeMountRequest{
+		VolumeId:  vol.Id,
+		MountPath: mountpoint,
+	})
 	if err != nil {
 		d.logRequest(method, request.Name).Warnf(
 			"Cannot mount volume %v, %v",
@@ -581,6 +611,7 @@ func (d *driver) mount(w http.ResponseWriter, r *http.Request) {
 
 func (d *driver) path(w http.ResponseWriter, r *http.Request) {
 	method := "path"
+	ctx := r.Context()
 	var response volumePathResponse
 
 	request, err := d.decode(method, w, r)
@@ -588,8 +619,16 @@ func (d *driver) path(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get grpc connection
+	conn, err := d.getConn()
+	if err != nil {
+		d.errorResponse(method, w, err)
+		return
+	}
+
+	sdkClient := api.NewOpenStorageVolumeClient(conn)
 	_, _, _, _, name := d.SpecFromString(request.Name)
-	vol, err := d.volFromName(name)
+	vol, err := d.volFromNameSdk(ctx, sdkClient, name)
 	if err != nil {
 		e := d.volNotFound(method, request.Name, err, w)
 		d.errorResponse(method, w, e)
