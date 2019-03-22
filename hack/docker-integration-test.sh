@@ -56,6 +56,7 @@ token=$($GOPATH/bin/osd-token-generator \
   --auth-config=hack/sdk-auth-sample.yml \
   --shared-secret=testsecret)
 
+token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImdyYW50QG9wZW5zdG9yYWdlLmlvIiwiZXhwIjoxNzczOTYzMDUyLCJncm91cHMiOlsiKiJdLCJpYXQiOjE1NTMyMTEwNTIsImlzcyI6Im9wZW5zdG9yYWdlLmlvIiwibmFtZSI6IkdyYW50IEdyaWZmaXRocyIsInJvbGVzIjpbInN5c3RlbS5hZG1pbiJdLCJzdWIiOiJncmFudEBvcGVuc3RvcmFnZS5pbyJ9.FzJBCtjJscYR_5dS6llumI7OqdL9Bb8mcdIU7z2Ff7M
 # Start OSD
 sudo -E $GOPATH/bin/osd \
 	-d \
@@ -82,7 +83,7 @@ assert_attached false
 
 # Run app with our  volume
 app_name="APP_TEST_$volume_name"
-sudo docker run -d --name $app_name --volume-driver fake -v size=12345,token=$token,name=${volume_name}:/app nginx:latest
+sudo docker run -d --name $app_name -v token=${token},size=12345,name=${volume_name}:/mnt/disk1 mariadb
 assert_success
 assert_attached true
 

@@ -34,6 +34,7 @@ type Options struct {
 func TokenClaims(rawtoken string) (*Claims, error) {
 	parts := strings.Split(rawtoken, ".")
 
+	fmt.Println("RAW TOKEN", rawtoken)
 	// There are supposed to be three parts for the token
 	if len(parts) < 3 {
 		return nil, fmt.Errorf("Token is invalid: %v", rawtoken)

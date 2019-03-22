@@ -333,6 +333,7 @@ func (d *driver) create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	fmt.Println("REQ", method, *r)
 
 	// attach token in context metadata
 	ctx, _, err = d.attachToken(ctx, request)
@@ -351,6 +352,12 @@ func (d *driver) create(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	fmt.Println("specParsed", specParsed)
+	fmt.Println("SPEC", spec)
+	fmt.Println("LOCATOR", locator)
+	fmt.Println("source", source)
+	fmt.Println("name", name)
+	fmt.Println("Req.Name", request.Name)
 
 	// get grpc connection
 	conn, err := d.getConn()
@@ -460,6 +467,7 @@ func (d *driver) mount(w http.ResponseWriter, r *http.Request) {
 		d.errorResponse(method, w, err)
 		return
 	}
+	fmt.Println("MOUNT CALLLED", request.Name)
 
 	// get grpc connection
 	conn, err := d.getConn()
