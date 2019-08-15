@@ -46,7 +46,7 @@ func NewAuthMiddleware(
 }
 
 type authMiddleware struct {
-	provider secrets.Auth
+	provider *secrets.Auth
 }
 
 func (a *authMiddleware) createWithAuth(w http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
@@ -67,14 +67,14 @@ func (a *authMiddleware) createWithAuth(w http.ResponseWriter, r *http.Request, 
 
 	spec := dcReq.GetSpec()
 	locator := dcReq.GetLocator()
-	secretName, secretContext, err := a.parseSecret(spec.VolumeLabels, locator.VolumeLabels, true)
+	tokenSecretContext, err := a.parseSecret(spec.VolumeLabels, locator.VolumeLabels, true)
 	if err != nil {
 		a.log(locator.Name, fn).WithError(err).Error("failed to parse secret")
 		dcRes.VolumeResponse = &api.VolumeResponse{Error: "failed to parse secret: " + err.Error()}
 		json.NewEncoder(w).Encode(&dcRes)
 		return
 	}
-	if secretName == "" {
+	if tokenSecretContext.SecretName == "" {
 		errorMessage := "Access denied, no secret found in the annotations of the persistent volume claim" +
 			" or storage class parameters"
 		a.log(locator.Name, fn).Error(errorMessage)
@@ -84,7 +84,7 @@ func (a *authMiddleware) createWithAuth(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	token, err := a.provider.GetToken(secretName, secretContext)
+	token, err := a.provider.GetToken(tokenSecretContext)
 	if err != nil {
 		a.log(locator.Name, fn).WithError(err).Error("failed to get token")
 		dcRes.VolumeResponse = &api.VolumeResponse{Error: "failed to get token: " + err.Error()}
@@ -213,14 +213,14 @@ func (a *authMiddleware) deleteWithAuth(w http.ResponseWriter, r *http.Request, 
 	}
 
 	volumeResponse := &api.VolumeResponse{}
-	secretName, secretContext, err := a.parseSecret(vols[0].Spec.VolumeLabels, vols[0].Locator.VolumeLabels, false)
+	tokenSecretContext, err := a.parseSecret(vols[0].Spec.VolumeLabels, vols[0].Locator.VolumeLabels, false)
 	if err != nil {
 		a.log(volumeID, fn).WithError(err).Error("failed to parse secret")
 		volumeResponse.Error = "failed to parse secret: " + err.Error()
 		json.NewEncoder(w).Encode(volumeResponse)
 		return
 	}
-	if secretName == "" {
+	if tokenSecretContext.SecretName == "" {
 		errorMessage := fmt.Sprintf("Error, unable to get secret information from the volume."+
 			" You may need to re-add the following keys as volume labels to point to the secret: %s and %s",
 			secrets.SecretNameKey, secrets.SecretNamespaceKey)
@@ -231,7 +231,7 @@ func (a *authMiddleware) deleteWithAuth(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	token, err := a.provider.GetToken(secretName, secretContext)
+	token, err := a.provider.GetToken(tokenSecretContext)
 	if err != nil {
 		a.log(volumeID, fn).WithError(err).Error("failed to get token")
 		volumeResponse.Error = "failed to get token: " + err.Error()
@@ -315,7 +315,7 @@ func (a *authMiddleware) parseParam(r *http.Request, param string) (string, erro
 func (a *authMiddleware) parseSecret(
 	specLabels, locatorLabels map[string]string,
 	fetchCOLabels bool,
-) (string, string, error) {
+) (*api.TokenSecretContext, error) {
 	if a.provider.Type() == secrets.TypeK8s && fetchCOLabels {
 		// For k8s fetch the actual annotations
 		pvcName, ok := locatorLabels[PVCNameLabelKey]
@@ -331,33 +331,54 @@ func (a *authMiddleware) parseSecret(
 
 		pvc, err := k8s.Instance().GetPersistentVolumeClaim(pvcName, pvcNamespace)
 		if err != nil {
-			return "", "", err
+			return nil, err
 		}
 		secretName := pvc.ObjectMeta.Annotations[secrets.SecretNameKey]
-		secretNamespace := pvc.ObjectMeta.Annotations[secrets.SecretNamespaceKey]
+
 		if len(secretName) == 0 {
 			return parseSecretFromLabels(specLabels, locatorLabels)
 		}
+		secretNamespace := pvc.ObjectMeta.Annotations[secrets.SecretNamespaceKey]
+		secretPublicData := pvc.ObjectMeta.Annotations[secrets.SecretPublicDataKey]
+		secretCustomData := pvc.ObjectMeta.Annotations[secrets.SecretCustomDataKey]
 
-		return secretName, secretNamespace, nil
+		return &api.TokenSecretContext{
+			SecretName:       secretName,
+			SecretNamespace:  secretNamespace,
+			SecretPublicData: secretPublicData,
+			SecretCustomData: secretCustomData,
+		}, nil
 	}
 	return parseSecretFromLabels(specLabels, locatorLabels)
 }
 
-func parseSecretFromLabels(specLabels, locatorLabels map[string]string) (string, string, error) {
+func parseSecretFromLabels(specLabels, locatorLabels map[string]string) (*api.TokenSecretContext, error) {
 	// Locator labels take precendence
 	secretName := locatorLabels[secrets.SecretNameKey]
 	secretNamespace := locatorLabels[secrets.SecretNamespaceKey]
+	secretPublicData := locatorLabels[secrets.SecretPublicDataKey]
+	secretCustomData := locatorLabels[secrets.SecretCustomDataKey]
 	if secretName == "" {
 		secretName = specLabels[secrets.SecretNameKey]
 	}
 	if secretName == "" {
-		return "", "", fmt.Errorf("secret name is empty")
+		return nil, fmt.Errorf("secret name is empty")
 	}
 	if secretNamespace == "" {
 		secretNamespace = specLabels[secrets.SecretNamespaceKey]
 	}
-	return secretName, secretNamespace, nil
+	if secretPublicData == "" {
+		secretPublicData = specLabels[secrets.SecretPublicDataKey]
+	}
+	if secretCustomData == "" {
+		secretCustomData = specLabels[secrets.SecretCustomDataKey]
+	}
+	return &api.TokenSecretContext{
+		SecretName:       secretName,
+		SecretNamespace:  secretNamespace,
+		SecretPublicData: secretPublicData,
+		SecretCustomData: secretCustomData,
+	}, nil
 }
 
 func (a *authMiddleware) log(id, fn string) *logrus.Entry {
