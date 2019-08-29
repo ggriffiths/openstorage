@@ -92,6 +92,7 @@ func (j *JwtAuthenticator) AuthenticateToken(ctx context.Context, rawtoken strin
 
 	// Parse token
 	token, err := jwt.Parse(rawtoken, func(token *jwt.Token) (interface{}, error) {
+		fmt.Println("***TOKEN", token)
 
 		// Verify Method
 		if strings.HasPrefix(token.Method.Alg(), "RS") {
@@ -104,6 +105,7 @@ func (j *JwtAuthenticator) AuthenticateToken(ctx context.Context, rawtoken strin
 			// HS256, HS384, or HS512
 			return j.sharedSecretKey, nil
 		}
+
 		return nil, fmt.Errorf("Unknown token algorithm: %s", token.Method.Alg())
 	})
 	if err != nil {
@@ -119,6 +121,8 @@ func (j *JwtAuthenticator) AuthenticateToken(ctx context.Context, rawtoken strin
 	if claims == nil || !ok {
 		return nil, fmt.Errorf("No claims found in token")
 	}
+	fmt.Println("CLAIMS exp", claims["exp"])
+	fmt.Println("CLAIMS iat", claims["iat"])
 
 	// Check for required claims
 	for _, requiredClaim := range requiredClaims {
