@@ -512,6 +512,10 @@ message Ownership {
     Admin = 2;
   }
 
+  message PublicAccessControl {
+    AccessType type = 1;
+  }
+
   message AccessControl {
     // Group access to resource which must match the group set in the
     // authorization token.
@@ -530,6 +534,8 @@ message Ownership {
     // 3. `["username1", "username2"]`: Only certain usernames are allowed. In this example only
     // _username1_ and _username2_ are allowed.
     map <string, AccessType> collaborators = 2;
+    // Public access to resource
+    PublicAccessControl public = 3;
   }
 
   // Username of owner.

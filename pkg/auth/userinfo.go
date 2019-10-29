@@ -37,6 +37,8 @@ type UserInfo struct {
 	Username string
 	// Claims holds the claims required by the storage system
 	Claims Claims
+	// Public marks whether the user is a public one
+	Public bool
 }
 
 // ContextSaveUserInfo saves user information in the context for other functions to consume

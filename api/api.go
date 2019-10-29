@@ -1073,6 +1073,11 @@ func (v *VolumeSpec) GetCloneCreatorOwnership(ctx context.Context) (*Ownership, 
 
 	// If there is user information, then auth is enabled
 	if userinfo, ok := auth.NewUserInfoFromContext(ctx); ok {
+		// if a public user clones a volume, we should not update
+		// the ownership.
+		if userinfo.Public {
+			return o, false
+		}
 
 		// Check if the owner is the one who cloned it
 		if o != nil && o.IsOwner(userinfo) {

@@ -50,7 +50,14 @@ const (
 	ContextDriverKey = "driver"
 	// DefaultDriverName is the default driver to be used
 	DefaultDriverName = "default"
+
+	AuthModeDisabled   = AuthMode(0)
+	AuthModePermissive = AuthMode(1)
+	AuthModeStrict     = AuthMode(2)
 )
+
+// AuthMode is the security mode the cluster is in
+type AuthMode int
 
 // TLSConfig points to the cert files needed for HTTPS
 type TLSConfig struct {
@@ -73,6 +80,12 @@ type SecurityConfig struct {
 	//     "openstorage-sdk-auth: selfSigned,
 	// }
 	Authenticators map[string]auth.Authenticator
+	// Mode is the current setting the cluster is started with
+	// Options are:
+	//   1. Disabled - no security enabled
+	//   2. Permissive - enabled but with public user access
+	//   3. Strict - enabled but without public user access
+	Mode AuthMode
 }
 
 // ServerConfig provides the configuration to the SDK server

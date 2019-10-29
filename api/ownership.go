@@ -34,9 +34,14 @@ const (
 // a volume. It takes an ownership value if passed in by the user, then
 // sets the `owner` value to the user name referred to in the user context
 func OwnershipSetUsernameFromContext(ctx context.Context, srcOwnership *Ownership) *Ownership {
+
 	// Check if the context has information about the user. If not,
 	// then security is not enabled.
 	if userinfo, ok := auth.NewUserInfoFromContext(ctx); ok {
+		// Public users cannot provide ownership
+		if userinfo.Public {
+			return srcOwnership
+		}
 
 		// Merge the previous acls which may have been set by the user
 		var acls *Ownership_AccessControl
@@ -182,7 +187,8 @@ func (o *Ownership) HasAnOwner() bool {
 
 // IsPublic returns true if there is no ownership in this resource
 func (o *Ownership) IsPublic() bool {
-	return !o.HasAnOwner()
+	return (o.Acls.Public != nil &&
+		o.Acls.Public.Type.isAccessPermitted(Ownership_Read)) || !o.HasAnOwner()
 }
 
 // IsOwner returns if the user is the owner of the resource
