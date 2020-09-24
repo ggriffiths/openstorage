@@ -693,3 +693,97 @@ func TestNodeGetCapabilities(t *testing.T) {
 		csi.NodeServiceCapability_RPC_UNKNOWN,
 		r.GetCapabilities()[0].GetRpc().GetType())
 }
+
+func TestNodeGetVolumeStats(t *testing.T) {
+	// Create server and client connection
+	s := newTestServer(t)
+	defer s.Stop()
+
+	// Make a call
+	c := csi.NewNodeClient(s.Conn())
+
+	name := "vol1"
+	size := uint64(10000)
+	usage := uint64(500)
+	available := int64(9500)
+	gomock.InOrder(
+		s.MockDriver().
+			EXPECT().
+			Inspect([]string{name}).
+			Return([]*api.Volume{
+				&api.Volume{
+					Id: name,
+					Locator: &api.VolumeLocator{
+						Name: name,
+					},
+					Spec: &api.VolumeSpec{
+						Size: size,
+					},
+					Usage: usage,
+				},
+			}, nil).
+			Times(1),
+	)
+
+	// Get Capabilities
+	r, err := c.NodeGetVolumeStats(
+		context.Background(),
+		&csi.NodeGetVolumeStatsRequest{
+			VolumeId: name,
+		})
+	assert.NoError(t, err)
+	assert.Len(t, r.GetUsage(), 1)
+	assert.Equal(t, r.GetUsage()[0].Available, int64(available))
+	assert.Equal(t, r.GetUsage()[0].Used, int64(usage))
+	assert.Equal(t, r.GetUsage()[0].Total, int64(size))
+	assert.Equal(t, r.GetUsage()[0].Unit, csi.VolumeUsage_BYTES)
+}
+
+func TestNodeGetVolumeStatsNotFound(t *testing.T) {
+	// Create server and client connection
+	s := newTestServer(t)
+	defer s.Stop()
+
+	// Make a call
+	c := csi.NewNodeClient(s.Conn())
+
+	name := "vol1"
+	gomock.InOrder(
+		s.MockDriver().
+			EXPECT().
+			Inspect([]string{name}).
+			Return([]*api.Volume{}, nil).
+			Times(1),
+	)
+
+	_, err := c.NodeGetVolumeStats(
+		context.Background(),
+		&csi.NodeGetVolumeStatsRequest{
+			VolumeId: name,
+		})
+	assert.NotNil(t, err)
+	serverError, ok := status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.NotFound, serverError.Code())
+	assert.Contains(t, serverError.Message(), "not found")
+
+	name = "vol1"
+	gomock.InOrder(
+		s.MockDriver().
+			EXPECT().
+			Inspect([]string{name}).
+			Return([]*api.Volume{}, fmt.Errorf("error")).
+			Times(1),
+	)
+
+	_, err = c.NodeGetVolumeStats(
+		context.Background(),
+		&csi.NodeGetVolumeStatsRequest{
+			VolumeId: name,
+		})
+	assert.NotNil(t, err)
+	serverError, ok = status.FromError(err)
+	assert.True(t, ok)
+	assert.Equal(t, codes.NotFound, serverError.Code())
+	assert.Contains(t, serverError.Message(), "error")
+}

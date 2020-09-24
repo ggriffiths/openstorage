@@ -280,3 +280,36 @@ func verifyTargetLocation(targetPath string) error {
 
 	return nil
 }
+
+// NodeGetVolumeStats gets stats for a given volume
+func (s *OsdCsiServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	vols, err := s.driver.Inspect([]string{req.GetVolumeId()})
+	if err != nil || len(vols) < 1 {
+		if err == kvdb.ErrNotFound {
+			logrus.Infof("Volume %s cannot be found: %s", req.GetVolumeId(), err.Error())
+			return &csi.NodeGetVolumeStatsResponse{}, nil
+		} else if err != nil {
+			return nil, status.Errorf(codes.NotFound, "Volume id %s not found: %s",
+				req.GetVolumeId(),
+				err.Error())
+		} else {
+			logrus.Infof("Volume %s cannot be found", req.GetVolumeId())
+			return &csi.NodeGetVolumeStatsResponse{}, status.Errorf(codes.NotFound, "Volume id %s not found",
+				req.GetVolumeId())
+		}
+	}
+	vol := vols[0]
+	total := int64(vol.GetSpec().GetSize())
+	used := int64(vol.GetUsage())
+	available := total - used
+	resp := &csi.NodeGetVolumeStatsResponse{
+		Usage: []*csi.VolumeUsage{{
+			Available: available,
+			Total:     total,
+			Used:      used,
+			Unit:      csi.VolumeUsage_BYTES,
+		}},
+	}
+
+	return resp, nil
+}
