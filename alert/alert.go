@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	// ErrNotSupported implemenation of a specific function is not supported.
+	// ErrNotSupported implemenation of a specific function is not supported.a
 	ErrNotSupported = errors.New("Implementation not supported")
 	// ErrNotFound raised if Key is not found.
 	ErrNotFound = errors.New("Key not found")
