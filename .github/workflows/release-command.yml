@@ -26,9 +26,11 @@ jobs:
           script: |
             const comment = context.payload.comment.body;
             const request = /\/release (.*)/.exec(comment);
-            const ALLOWED_ENVIRONMENTS = ['qa', 'test'];
-            // Ensure request is one of the allowed options
-            if (request && ALLOWED_ENVIRONMENTS.indexOf(request[1]) > -1) {
+
+            // Ensure request is of the format gs-rel-x.y.z
+            const semvarRegex = /gs-rel-[0-9]+.[0-9]+.[0-9]+/g;
+            
+            if (request && request[1].match(semvarRegex)) {
               console.log(`release request "${request[1]}"`);
             
               await github.issues.addLabels({
