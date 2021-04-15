@@ -28,7 +28,7 @@ jobs:
             result = github.event.comment.body.match(semvarRegex)
             if (result && result.length > 0) {
               splitResult = result[0].split(" ")
-              if (splitResult && splitResult.length > 0) {
+              if (splitResult && splitResult.length > 1) {
                 release = splitResult[1];              
                 await github.issues.addLabels({
                   ...context.repo,
@@ -36,5 +36,5 @@ jobs:
                   labels: [`release/${release}`]
                 });
             } else {
-              console.log(`:red_circle:  Error occurred "${request ? request[1] : null}"`);
+              console.log(`:red_circle:  Error occurred`);
             }
