@@ -9,5 +9,8 @@
 **Which issue(s) this PR fixes** (optional)
 Closes #
 
+**Release**
+/release gs-rel-
+
 **Special notes for your reviewer**:
 
