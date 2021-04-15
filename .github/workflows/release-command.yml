@@ -6,11 +6,10 @@ name: Command - Release
 #
 
 on:
-  pull_request_review_comment:
-    types:
-      - created
-      - edited
-
+  pull_request:
+    types: [opened]
+  issue_comment:
+    types: [created]
 jobs:
   command:
     name: Command
