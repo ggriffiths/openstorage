@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-20.04
     
     # Save some actions minutes, and only execute when necessary :-)
-    if: startsWith(github.event.comment.body, '/release ')
+    if: contains(github.event.comment.body, '/release ')
 
     steps:
       - name: Parse and Respond to Command
@@ -24,20 +24,17 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const comment = context.payload.comment.body;
-            const request = /\/release (.*)/.exec(comment);
-
-            // Ensure request is of the format gs-rel-x.y.z
-            const semvarRegex = /gs-rel-[0-9]+.[0-9]+.[0-9]+/g;
-            
-            if (request && request[1].match(semvarRegex)) {
-              console.log(`release request "${request[1]}"`);
-            
-              await github.issues.addLabels({
-                ...context.repo,
-                issue_number: context.issue.number,
-                labels: [`release/${request[1]}`]
-              });
+            const semvarRegex = /\/release gs-rel-[0-9]+.[0-9]+.[0-9]+/g;
+            result = github.event.comment.body.match(semvarRegex)
+            if (result && result.length > 0) {
+              splitResult = result[0].split(" ")
+              if (splitResult && splitResult.length > 0) {
+                release = splitResult[1];              
+                await github.issues.addLabels({
+                  ...context.repo,
+                  issue_number: context.issue.number,
+                  labels: [`release/${release}`]
+                });
             } else {
               console.log(`:red_circle:  Error occurred "${request ? request[1] : null}"`);
             }
